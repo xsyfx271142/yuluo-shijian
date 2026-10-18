@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>雨落诗笺 · 听雨轩 v1.3.2</title>
+<html lang="zh-CN" data-page-node-id="GTova4W3Ifik0XWOVdl2FO">
+<head data-page-node-id="QsNs0nRhKXDEhMQAcW5tQh">
+<meta charset="UTF-8" data-page-node-id="EmAZZvN11smUskoHxlXxa9">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="HbougzpFGDUb1I6BIIPpEz">
+<title>雨落诗笺 · 听雨轩 v1.4</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
 :root {
@@ -83,19 +83,490 @@ h1 { text-align: center; font-size: 2em; font-weight: 700; color: var(--accent);
 .author-seal::before { content: ''; position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px; border: 1px solid rgba(139,0,0,0.2); }
 .author-footer { text-align: center; margin-top: 30px; padding-top: 16px; border-top: 1px dashed var(--border); font-size: 0.85em; color: var(--ink-light); }
 @media (max-width: 600px) { .paper { margin: 10px; padding: 24px 16px; } h1 { font-size: 1.5em; } }
+
+/* ===== 意境配乐控制条 ===== */
+#乐条 {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 12px; padding: 7px 12px;
+  border: 1px solid var(--border); border-radius: 3px;
+  background: rgba(139,69,19,0.04);
+  font-size: 0.8em; color: var(--ink-light);
+}
+#乐名 { flex: 1; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#乐开关 {
+  font-family: inherit; font-size: 1em; line-height: 1;
+  border: 1px solid var(--border); border-radius: 3px; background: #fdf6ec;
+  color: var(--ink); cursor: pointer; padding: 3px 7px;
+}
+#乐开关:hover { border-color: var(--accent); }
+#乐开关.off { opacity: 0.45; }
+#乐量 { width: 96px; accent-color: var(--accent); cursor: pointer; }
 </style>
 </head>
-<body>
-<div class="paper" id="app">
-  <div style="text-align:center; margin-bottom:8px; padding-bottom:12px; border-bottom:1px dashed var(--border);">
-    <div style="font-size:1.6em; font-weight:700; color:var(--accent); letter-spacing:0.2em;">雨落诗笺</div>
-    <div style="font-size:0.8em; color:var(--ink-light); margin-top:4px;">
-      <span style="display:inline-block; border:1px solid var(--red); color:var(--red); padding:1px 6px; font-size:0.75em;">xsyfx271142</span>
+<body data-page-node-id="c8Lpx8iOFhCTcwUwcaCebt">
+<div class="paper" id="app" data-page-node-id="gII84i5ciCaE1IWsdzxzYk">
+  <div id="乐条" data-page-node-id="e861bBsACNfT33Bxrw2jvh">
+    <span id="乐名" data-page-node-id="lWyroZo6saxDgn6NKPOxZR">♪ 主阁 · 闲庭信步</span>
+    <button id="乐开关" title="静音 / 开声" data-page-node-id="PHvVQ1McdX1qk7ibUuSFEG">🔊</button>
+    <input id="乐量" type="range" min="0" max="100" value="55" title="音量" data-page-node-id="8E761UTt2RG4dlPExAJN0s">
+  </div>
+
+  <div style="text-align:center; margin-bottom:8px; padding-bottom:12px; border-bottom:1px dashed var(--border);" data-page-node-id="THOirU1mZLS40yBiCqyEqm">
+    <div style="font-size:1.6em; font-weight:700; color:var(--accent); letter-spacing:0.2em;" data-page-node-id="YIwlpge3FNzJVg02w0AdpP">雨落诗笺</div>
+    <div style="font-size:0.8em; color:var(--ink-light); margin-top:4px;" data-page-node-id="iDpiixSNtEFZf2ShNY18MH">
+      <span style="display:inline-block; border:1px solid var(--red); color:var(--red); padding:1px 6px; font-size:0.75em;" data-page-node-id="8KpRHAKMMYi8WFqfOZlgtN">xsyfx271142</span>
     </div>
   </div>
-  <div id="content"></div>
+  <div id="content" data-page-node-id="aVfT1n9EkzPj7dP05Vu1MN"></div>
 </div>
 <script>
+
+/* ==========================================================================
+   听雨轩 · 意境配乐引擎  v2
+   --------------------------------------------------------------------------
+   纯 Web Audio API 合成，不引用任何外部音频文件，单文件离线可听、无版权顾虑。
+   v2 音色升级：
+     · 古琴／琵琶改用 Karplus-Strong 弦舼物理建模（噪声激励 + 延迟线低通反馈），
+       比正弦叠加自然得多，有真实拨弦的起振、衰减与余韵。
+     · 全程过卷积混响（程序生成脉冲响应），去掉电子琴的「干赢」感。
+     · 箫／笛加入颤音（vibrato）与气声，竹管味更足。
+     · 雨声叠加随机雨滴颗粒，风声多层带通交叉，不再是死板的噪声。
+   十重意境各配一景，另有主阁、雅戏、茶楼、诗案等场景乐与答题音效。
+   ========================================================================== */
+const 乐 = (function () {
+
+  let ctx = null, 总线 = null, 环境总线 = null, 旋律总线 = null;
+  let 干声 = null, 湿声 = null, 混响 = null;
+  let 当前景 = null, 环境节点 = [], 旋律计时 = null;
+  let 音量 = 0.55, 静音 = false, 就绪 = false, 待播 = null;
+  const KS缓存 = {};
+
+  /* ---------------- 乐理基础 ---------------- */
+  const 半音 = n => Math.pow(2, n / 12);
+
+  const 音阶表 = {
+    宫: [0, 2, 4, 7, 9],
+    商: [0, 2, 5, 7, 10],
+    角: [0, 3, 5, 8, 10],
+    徵: [0, 2, 5, 7, 9],
+    羽: [0, 3, 5, 7, 10],
+  };
+
+  function 取音(调, 主音, 级) {
+    const s = 音阶表[调] || 音阶表.宫;
+    const 八度 = Math.floor(级 / s.length);
+    const 音级 = ((级 % s.length) + s.length) % s.length;
+    return 主音 * 半音(s[音级] + 八度 * 12);
+  }
+
+  function 建噪声(秒) {
+    const len = Math.floor(ctx.sampleRate * 秒);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return buf;
+  }
+
+  /* ================= 物理建模弦（Karplus-Strong） =================
+     一段环形延迟线填入噪声，每圈取相邻两值平均（＝低通滤波）并乘阻尼。
+     高次泛音衰减快、基音衰减慢，天然形成拨弦的音色演变。          */
+  const 弦规格 = {
+    琴: { 基频: 220.00, 秒: 6.0, 阻尼: 0.9986, 亮度: 0.42 },   // 古琴：余韵悠长
+    琶: { 基频: 329.63, 秒: 2.6, 阻尼: 0.9920, 亮度: 0.72 },   // 琵琶：清脆短促
+  };
+
+  function 取弦(器) {
+    if (KS缓存[器]) return KS缓存[器];
+    const sp = 弦规格[器] || 弦规格.琴;
+    const sr = ctx.sampleRate;
+    const N = Math.max(2, Math.round(sr / sp.基频));
+    const len = Math.floor(sr * sp.秒);
+    const buf = ctx.createBuffer(1, len, sr);
+    const out = buf.getChannelData(0);
+    const line = new Float32Array(N);
+
+    // 激励：低通白噪。亮度越低，起振越柔，更像丝弦而非钢弦
+    let lp = 0;
+    for (let i = 0; i < N; i++) {
+      const w = Math.random() * 2 - 1;
+      lp += (w - lp) * sp.亮度;
+      line[i] = lp;
+    }
+    // 环形缓冲迭代
+    let idx = 0, 峰 = 0;
+    for (let i = 0; i < len; i++) {
+      const cur = line[idx];
+      const nxt = line[(idx + 1) % N];
+      line[idx] = (cur + nxt) * 0.5 * sp.阻尼;
+      out[i] = cur * Math.min(1, i / 160);     // 极短起振，避免爆音
+      idx = (idx + 1) % N;
+      const a = Math.abs(out[i]); if (a > 峰) 峰 = a;
+    }
+    // 归一化，保证不同规格音量一致
+    if (峰 > 0) { const k = 0.92 / 峰; for (let i = 0; i < len; i++) out[i] *= k; }
+
+    KS缓存[器] = { buf, 基频: sp.基频, 秒: sp.秒 };
+    return KS缓存[器];
+  }
+
+  /* ---------------- 混响 ---------------- */
+  function 建混响IR(秒, 衰减) {
+    const sr = ctx.sampleRate;
+    const len = Math.floor(sr * 秒);
+    const buf = ctx.createBuffer(2, len, sr);
+    for (let c = 0; c < 2; c++) {
+      const d = buf.getChannelData(c);
+      for (let i = 0; i < len; i++) {
+        const t = i / len;
+        // 前段稀疏早期反射 + 后段致密尾巴
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 衰减) * (t < 0.02 ? t * 50 : 1);
+      }
+    }
+    return buf;
+  }
+
+  /* ---------------- 乐器音色 ---------------- */
+
+  // 古琴／琵琶：Karplus-Strong 拨弦
+  function 拨弦(f, t, dur, vol, 器) {
+    器 = 器 || '琴';
+    const s = 取弦(器);
+    const rate = f / s.基频;
+    if (!isFinite(rate) || rate <= 0) return;
+    const src = ctx.createBufferSource();
+    src.buffer = s.buf;
+    src.playbackRate.value = rate;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    // 自然收音：留足余韵后再淡出
+    g.gain.setTargetAtTime(0.0001, t + dur * 0.75, dur * 0.22);
+    src.connect(g); g.connect(旋律总线);
+    src.start(t);
+    src.stop(t + Math.min(dur, s.秒 / Math.max(rate, 0.25)));
+  }
+
+  // 琵琶轮指：同音快速连拨
+  function 轮指(f, t, vol) {
+    for (let i = 0; i < 4; i++) {
+      拨弦(f, t + i * 0.052, 0.62 - i * 0.07, vol * (1 - i * 0.15), '琶');
+    }
+  }
+
+  // 洞箫／竹笛：吹管。基音 + 弱泛音 + 气声 + 颤音
+  function 吹管(f, t, dur, vol) {
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.26);
+    g.gain.setValueAtTime(vol, t + dur * 0.60);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    g.connect(旋律总线);
+
+    // 颤音：约 4.6 Hz，深约 0.8%
+    const lfo = ctx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 4.6;
+    const lg = ctx.createGain(); lg.gain.value = f * 0.008;
+    lfo.connect(lg); lfo.start(t); lfo.stop(t + dur);
+
+    const o = ctx.createOscillator();
+    o.type = 'sine'; o.frequency.value = f;
+    lg.connect(o.frequency);
+    o.connect(g); o.start(t); o.stop(t + dur);
+
+    // 第二泛音，让竹管不至于太单薄
+    const g3 = ctx.createGain();
+    g3.gain.setValueAtTime(0.0001, t);
+    g3.gain.exponentialRampToValueAtTime(vol * 0.16, t + dur * 0.3);
+    g3.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    g3.connect(旋律总线);
+    const o3 = ctx.createOscillator();
+    o3.type = 'sine'; o3.frequency.value = f * 3;
+    lg.connect(o3.frequency);
+    o3.connect(g3); o3.start(t); o3.stop(t + dur);
+
+    // 吹气噪声
+    const ns = ctx.createBufferSource(); ns.buffer = 建噪声(dur);
+    const nf = ctx.createBiquadFilter();
+    nf.type = 'bandpass'; nf.frequency.value = f * 2.4; nf.Q.value = 2.2;
+    const ng = ctx.createGain(); ng.gain.value = vol * 0.055;
+    ns.connect(nf); nf.connect(ng); ng.connect(旋律总线);
+    ns.start(t); ns.stop(t + dur);
+  }
+
+  // 钟磬：非谐分音叠加，余韵悠长
+  function 钟磬(f, t, vol, dur) {
+    dur = dur || 3.4;
+    [1, 2.76, 5.40, 8.93, 13.34].forEach((r, i) => {
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol / (i + 1.6), t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur / (i * 0.42 + 1));
+      g.connect(旋律总线);
+      const o = ctx.createOscillator();
+      o.type = 'sine'; o.frequency.value = f * r;
+      o.connect(g); o.start(t); o.stop(t + dur);
+    });
+  }
+
+  // 更鼓：低沉一击
+  function 鼓(f, t, vol) {
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.0);
+    g.connect(旋律总线);
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(f * 2.4, t);
+    o.frequency.exponentialRampToValueAtTime(f * 0.55, t + 0.28);
+    o.connect(g); o.start(t); o.stop(t + 1.05);
+  }
+
+  /* ---------------- 环境音层 ---------------- */
+  function 建环境(类型) {
+    const 组 = [];
+    const 起 = ctx.currentTime;
+
+    function 环(滤型, 频, Q, 音量值, 衰) {
+      const src = ctx.createBufferSource();
+      src.buffer = 建噪声(5); src.loop = true;
+      const f = ctx.createBiquadFilter();
+      f.type = 滤型; f.frequency.value = 频; if (Q) f.Q.value = Q;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, 起);
+      g.gain.linearRampToValueAtTime(音量值, 起 + (衰 || 3));
+      src.connect(f); f.connect(g); g.connect(环境总线);
+      src.start();
+      return [src, g];
+    }
+
+    if (类型 === '雨') {
+      // 雨幕底噪 + 雨势起伏
+      const 底 = 环('highpass', 1200, 0.6, 0.062, 3.5);
+      const lfo = ctx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.09;
+      const lg = ctx.createGain(); lg.gain.value = 0.022;
+      lfo.connect(lg); lg.connect(底[1].gain); lfo.start();
+      组.push(底, [lfo, lg]);
+      组.push(环('bandpass', 3600, 0.5, 0.030, 3.5));   // 高频雨丝
+      组.push(环('lowpass', 420, 0.7, 0.034, 3.5));     // 远处雨声闷响
+    } else if (类型 === '风') {
+      // 多层带通，模拟风的起伏层次
+      const 低 = 环('lowpass', 380, 0.8, 0.070, 4);
+      const l1 = ctx.createOscillator(); l1.type = 'sine'; l1.frequency.value = 0.06;
+      const g1 = ctx.createGain(); g1.gain.value = 0.038;
+      l1.connect(g1); g1.connect(低[1].gain); l1.start();
+      组.push(低, [l1, g1]);
+      const 中 = 环('bandpass', 900, 1.1, 0.030, 4);
+      const l2 = ctx.createOscillator(); l2.type = 'sine'; l2.frequency.value = 0.11;
+      const g2 = ctx.createGain(); g2.gain.value = 0.018;
+      l2.connect(g2); g2.connect(中[1].gain); l2.start();
+      组.push(中, [l2, g2]);
+    } else if (类型 === '水') {
+      const 底 = 环('lowpass', 620, 0.7, 0.056, 4);
+      const l = ctx.createOscillator(); l.type = 'sine'; l.frequency.value = 0.15;
+      const g = ctx.createGain(); g.gain.value = 0.026;
+      l.connect(g); g.connect(底[1].gain); l.start();
+      组.push(底, [l, g]);
+      组.push(环('bandpass', 1800, 0.9, 0.016, 4));   // 细碎水花
+    } else if (类型 === '火') {
+      const 底 = 环('lowpass', 420, 0.6, 0.050, 4);
+      const l = ctx.createOscillator(); l.type = 'sine'; l.frequency.value = 0.5;
+      const g = ctx.createGain(); g.gain.value = 0.022;
+      l.connect(g); g.connect(底[1].gain); l.start();
+      组.push(底, [l, g]);
+    } else if (类型 === '市') {
+      组.push(环('bandpass', 560, 1.0, 0.040, 4));
+      组.push(环('bandpass', 1450, 1.5, 0.022, 4));
+    } else if (类型 === '霁') {
+      组.push(环('highpass', 1800, 0.6, 0.024, 7));
+    }
+    return 组;
+  }
+
+  /* ---------------- 场景乐配置 ---------------- */
+  const 场景表 = {
+    主阁:  { 调:'宫', 主音:220.00, 环境:'静', 器:'琴', 隔:[2400,4000], 级域:[0,9],  名:'主阁 · 闲庭信步' },
+    其一:  { 调:'羽', 主音:196.00, 环境:'雨', 器:'琴', 隔:[2800,4600], 级域:[0,8],  名:'其一 · 凭轩听雨' },
+    其二:  { 调:'宫', 主音:261.63, 环境:'风', 器:'箫', 隔:[3000,5000], 级域:[2,10], 名:'其二 · 倚栏听风' },
+    其三:  { 调:'羽', 主音:174.61, 环境:'静', 器:'箫', 隔:[3200,5200], 级域:[0,7],  名:'其三 · 对月独酌' },
+    其四:  { 调:'角', 主音:329.63, 环境:'风', 器:'磬', 隔:[3400,5600], 级域:[3,11], 名:'其四 · 踏雪寻梅' },
+    其五:  { 调:'徵', 主音:220.00, 环境:'火', 器:'琴', 隔:[2200,3600], 级域:[1,9],  名:'其五 · 煮茶论道' },
+    其六:  { 调:'宫', 主音:293.66, 环境:'风', 器:'箫', 隔:[4200,7000], 级域:[4,12], 名:'其六 · 临窗望云' },
+    其七:  { 调:'宫', 主音:196.00, 环境:'静', 器:'琴', 隔:[1300,2400], 级域:[0,11], 名:'其七 · 抚琴待知音' },
+    其八:  { 调:'徵', 主音:164.81, 环境:'风', 器:'磬', 隔:[2600,4200], 级域:[0,10], 名:'其八 · 拾级登高' },
+    其九:  { 调:'徵', 主音:207.65, 环境:'水', 器:'琴', 隔:[2600,4200], 级域:[0,9],  名:'其九 · 归舟泊岸' },
+    其十:  { 调:'宫', 主音:261.63, 环境:'霁', 器:'琴', 隔:[2200,3800], 级域:[2,12], 名:'其十 · 雨歇虹现' },
+
+    雅戏:  { 调:'宫', 主音:246.94, 环境:'静', 器:'琴', 隔:[1600,2800], 级域:[1,10], 名:'雅戏 · 拈须沉吟' },
+    飞花:  { 调:'宫', 主音:293.66, 环境:'风', 器:'琶', 隔:[1200,2200], 级域:[3,12], 名:'飞花令 · 落英缤纷' },
+    回廊:  { 调:'羽', 主音:164.81, 环境:'静', 器:'琴', 隔:[2800,4400], 级域:[0,7],  名:'错题回廊 · 灯下重读' },
+    茶楼:  { 调:'徵', 主音:246.94, 环境:'市', 器:'琶', 隔:[900,1700],  级域:[1,11], 名:'听雨茶楼 · 弦歌不辍' },
+    诗案:  { 调:'羽', 主音:130.81, 环境:'静', 器:'鼓', 隔:[2400,3800], 级域:[0,6],  名:'诗案探疑 · 抽丝剥茧' },
+    断案:  { 调:'宫', 主音:196.00, 环境:'静', 器:'磬', 隔:[2200,3600], 级域:[2,11], 名:'真凶落网 · 水落石出' },
+    市井:  { 调:'徵', 主音:261.63, 环境:'市', 器:'琶', 隔:[1100,2000], 级域:[2,11], 名:'鬼市 · 灯火阑珊' },
+    古籍:  { 调:'宫', 主音:220.00, 环境:'火', 器:'琴', 隔:[3000,4800], 级域:[0,8],  名:'古籍修复 · 青灯黄卷' },
+    雅集:  { 调:'宫', 主音:293.66, 环境:'市', 器:'磬', 隔:[1400,2500], 级域:[3,12], 名:'雅集筹办 · 群贤毕至' },
+    碑林:  { 调:'羽', 主音:146.83, 环境:'风', 器:'磬', 隔:[3400,5400], 级域:[0,8],  名:'听雨碑林 · 石上春秋' },
+    图鉴:  { 调:'宫', 主音:246.94, 环境:'静', 器:'琴', 隔:[2000,3200], 级域:[2,11], 名:'诗囊图鉴 · 寸锦寸心' },
+    求签:  { 调:'角', 主音:220.00, 环境:'静', 器:'磬', 隔:[2600,4200], 级域:[1,10], 名:'诗谶求签 · 天机微茫' },
+    诗友:  { 调:'徵', 主音:293.66, 环境:'静', 器:'箫', 隔:[1800,3000], 级域:[3,12], 名:'诗友偶遇 · 倾盖如故' },
+    收尾:  { 调:'宫', 主音:174.61, 环境:'雨', 器:'琴', 隔:[3000,5000], 级域:[0,9],  名:'曲终 · 灯下掩卷' },
+  };
+
+  /* ---------------- 旋律循环 ---------------- */
+  function 奏旋律(名, cfg) {
+    if (当前景 !== 名) return;
+    const 隔 = cfg.隔[0] + Math.random() * (cfg.隔[1] - cfg.隔[0]);
+    旋律计时 = setTimeout(() => {
+      if (当前景 !== 名) return;
+      const 级 = cfg.级域[0] + Math.floor(Math.random() * (cfg.级域[1] - cfg.级域[0] + 1));
+      const f = 取音(cfg.调, cfg.主音, 级);
+      const t = ctx.currentTime + 0.03;
+      const 器 = cfg.器;
+      if (器 === '琴') 拨弦(f, t, 3.2 + Math.random() * 1.6, 0.19, '琴');
+      else if (器 === '箫') 吹管(f, t, 2.0 + Math.random() * 1.8, 0.15);
+      else if (器 === '磬') 钟磬(f, t, 0.13, 3.6);
+      else if (器 === '琶') 轮指(f, t, 0.14);
+      else if (器 === '鼓') 鼓(f / 2, t, 0.16);
+      // 偶尔低音托底，免得旋律太单薄
+      if (Math.random() < 0.22) {
+        拨弦(取音(cfg.调, cfg.主音, cfg.级域[0] - 2), t + 0.14, 4.0, 0.085, '琴');
+      }
+      奏旋律(名, cfg);
+    }, 隔);
+  }
+
+  /* ---------------- 场景切换 ---------------- */
+  function 切换(名) {
+    if (!就绪) { 待播 = 名; return; }
+    if (名 === 当前景) return;
+    当前景 = 名;
+    const cfg = 场景表[名] || 场景表.主阁;
+
+    const 旧 = 环境节点; 环境节点 = [];
+    旧.forEach(pair => {
+      try {
+        const g = pair[1], src = pair[0];
+        g.gain.cancelScheduledValues(ctx.currentTime);
+        g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.8);
+        setTimeout(() => { try { src.stop(); } catch (e) {} }, 3000);
+      } catch (e) {}
+    });
+    clearTimeout(旋律计时);
+
+    if (cfg.环境 !== '静') 环境节点 = 建环境(cfg.环境);
+    奏旋律(名, cfg);
+
+    const el = document.getElementById('乐名');
+    if (el) el.textContent = '♪ ' + cfg.名;
+  }
+
+  /* ---------------- 音效 ---------------- */
+  function 音效(类型) {
+    if (!就绪 || 静音 || !ctx) return;
+    const t = ctx.currentTime + 0.01;
+    if (类型 === '对') {
+      钟磬(987.77, t, 0.115, 2.0);
+      钟磬(1318.5, t + 0.06, 0.070, 1.6);
+    } else if (类型 === '错') {
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.12, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+      g.connect(旋律总线);
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(196, t);
+      o.frequency.exponentialRampToValueAtTime(98, t + 0.55);
+      o.connect(g); o.start(t); o.stop(t + 0.85);
+    } else if (类型 === '得') {
+      钟磬(523.25, t, 0.105, 2.4);
+      钟磬(659.25, t + 0.13, 0.090, 2.2);
+      钟磬(783.99, t + 0.26, 0.080, 2.6);
+    } else if (类型 === '解锁') {
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => 拨弦(f, t + i * 0.12, 2.6, 0.15, '琴'));
+    }
+  }
+
+  /* ---------------- 初始化与音量 ---------------- */
+  function 启动() {
+    if (就绪) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ctx = new AC();
+
+      总线 = ctx.createGain(); 总线.gain.value = 静音 ? 0 : 音量;
+      总线.connect(ctx.destination);
+
+      // 干／湿并联，整体过一层柔和混响
+      干声 = ctx.createGain(); 干声.gain.value = 0.82; 干声.connect(总线);
+      混响 = ctx.createConvolver(); 混响.buffer = 建混响IR(2.8, 2.6);
+      湿声 = ctx.createGain(); 湿声.gain.value = 0.30;
+      混响.connect(湿声); 湿声.connect(总线);
+
+      环境总线 = ctx.createGain(); 环境总线.gain.value = 1.0;
+      环境总线.connect(干声); 环境总线.connect(混响);
+
+      旋律总线 = ctx.createGain(); 旋律总线.gain.value = 1.0;
+      旋律总线.connect(干声); 旋律总线.connect(混响);
+
+      就绪 = true;
+      if (待播) { const n = 待播; 待播 = null; 当前景 = null; 切换(n); }
+      else 切换('主阁');
+    } catch (e) { /* 不支持则静默降级，不影响游戏 */ }
+  }
+
+  function 设音量(v) {
+    音量 = v;
+    if (总线 && ctx) 总线.gain.setTargetAtTime(静音 ? 0 : 音量, ctx.currentTime, 0.05);
+  }
+
+  function 设静音(b) {
+    静音 = b;
+    if (总线 && ctx) 总线.gain.setTargetAtTime(静音 ? 0 : 音量, ctx.currentTime, 0.05);
+    const el = document.getElementById('乐开关');
+    if (el) { el.textContent = 静音 ? '🔇' : '🔊'; el.classList.toggle('off', 静音); }
+  }
+
+  // v1.4：供「听音辨曲」单音试听
+  function 弹音(f, dur, vol) {
+    if (!就绪 || !ctx) return;
+    try { 拨弦(f, ctx.currentTime + 0.03, dur || 2.4, vol || 0.22, '琴'); } catch (e) {}
+  }
+
+  return {
+    切换, 音效, 启动, 设音量, 设静音, 弹音,
+    取状态: () => ({ 就绪, 静音, 音量, 当前景 }),
+  };
+})();
+
+// 浏览器自动播放策略：首次用户手势后再启动音频
+(function () {
+  function 首次() {
+    乐.启动();
+    document.removeEventListener('click', 首次);
+    document.removeEventListener('keydown', 首次);
+    document.removeEventListener('touchstart', 首次);
+  }
+  document.addEventListener('click', 首次);
+  document.addEventListener('keydown', 首次);
+  document.addEventListener('touchstart', 首次);
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const 量 = document.getElementById('乐量');
+    const 关 = document.getElementById('乐开关');
+    if (量) 量.addEventListener('input', e => 乐.设音量(e.target.value / 100));
+    if (关) 关.addEventListener('click', e => {
+      e.stopPropagation();
+      乐.启动();
+      乐.设静音(!乐.取状态().静音);
+    });
+  });
+})();
+
+// 全局便捷入口
+function 配乐(名) { try { 乐.切换(名); } catch (e) {} }
+function 音效(名) { try { 乐.音效(名); } catch (e) {} }
+
 
 // ==================== v1.3 数据定义 ====================
 const 时辰签 = {
@@ -188,15 +659,15 @@ const 飞花令题库 = {
 
 const 章节数据 = {
   '其一': {名:'凭轩听雨', 锁:'默认开启', 文:['总导语','会有一点的失落。','世界这么多人，总是擦肩而过……','越走越远了，猛一回头，你是否还站在原地翘望……','没有仇恨…','没有战争…','没有离别…','没有言语…','任时间从脸上流淌…','看着我，看着我…','我什么都不要…','只要你静静的看着我…','凭轩卧听雨荷声，点点滴滴在心头'], 互动:'你，可曾也在雨中听过什么？'},
-  '其二': {名:'倚栏听风', 锁:'完成任意模式一次', 文:['风起了。','吹散了檐角的雨珠，吹开了尘封的窗。','倚栏而立，看云卷云舒。','风里有远方的消息，有旧人的叹息。','风不停，心事不止。','且听风吟。'], 互动:null},
-  '其三': {名:'对月独酌', 锁:'单次得分≥60', 文:['月升东山，清辉满庭。','举杯邀月，对影成三人。','酒入愁肠，化作相思泪。','月有阴晴圆缺，此事古难全。','唯愿人长久，千里共婵娟。'], 互动:null},
-  '其四': {名:'踏雪寻梅', 锁:'人机对弈获胜', 文:['雪落无声，覆盖了来时的路。','寒梅傲立，暗香浮动。','不为争春，只为报春。','零落成泥碾作尘，只有香如故。','踏雪而来，寻梅而去。'], 互动:null},
-  '其五': {名:'煮茶论道', 锁:'三种锦囊各用一次', 文:['炉火初红，茶香四溢。','坐而论道，不如起而行之。','茶凉了可以再续，人走了还能再聚吗？','一期一会，珍重当下。','且将新火试新茶，诗酒趁年华。'], 互动:null},
-  '其六': {名:'临窗望云', 锁:'累计答对10题', 文:['窗含西岭千秋雪，门泊东吴万里船。','临窗望云，云卷云舒。','去留无意，宠辱不惊。','看山是山，看水是水。','心境即云境。'], 互动:null},
-  '其七': {名:'抚琴待知音', 锁:'错题回廊答对5题', 文:['琴瑟在御，莫不静好。','弦弦掩抑声声思，似诉平生不得志。','伯牙子期，高山流水。','知音少，弦断有谁听？','抚琴以待，君来否？'], 互动:null},
-  '其八': {名:'拾级登高', 锁:'地狱难度通关', 文:['欲穷千里目，更上一层楼。','登高望远，天地一沙鸥。','不畏浮云遮望眼，只缘身在最高层。','高处不胜寒，却见众山小。','拾级而上，步步惊心。'], 互动:null},
-  '其九': {名:'归舟泊岸', 锁:'累计跳过20题', 文:['轻舟已过万重山。','归舟泊岸，渔火点点。','家在哪里？在灯火阑珊处。','此心安处是吾乡。','泊岸，是为了下一次起航。'], 互动:null},
-  '其十': {名:'雨歇', 锁:'解锁前九章', 文:['雨终于停了。','天边出现了一道虹。','所有的等待都有了答案，所有的离别都是为了重逢。','凭轩听雨的故事，到此暂歇。','但雨还会再下，我们还会再见。','未完，但不是结束。'], 互动:null},
+  '其二': {名:'倚栏听风', 锁:'完成任意模式一次', 文:['风起了。','吹散了檐角的雨珠，吹开了尘封的窗。','倚栏而立，看云卷云舒。','风里有远方的消息，有旧人的叹息。','风不停，心事不止。','且听风吟。'], 互动:'风里有远方的消息。你，最想听见谁的消息？'},
+  '其三': {名:'对月独酌', 锁:'单次得分≥60', 文:['月升东山，清辉满庭。','举杯邀月，对影成三人。','酒入愁肠，化作相思泪。','月有阴晴圆缺，此事古难全。','唯愿人长久，千里共婵娟。'], 互动:'若此刻手中有酒，这一杯，你敬给谁？'},
+  '其四': {名:'踏雪寻梅', 锁:'人机对弈获胜', 文:['雪落无声，覆盖了来时的路。','寒梅傲立，暗香浮动。','不为争春，只为报春。','零落成泥碾作尘，只有香如故。','踏雪而来，寻梅而去。'], 互动:'你曾在最冷的时候，等过什么吗？'},
+  '其五': {名:'煮茶论道', 锁:'三种锦囊各用一次', 文:['炉火初红，茶香四溢。','坐而论道，不如起而行之。','茶凉了可以再续，人走了还能再聚吗？','一期一会，珍重当下。','且将新火试新茶，诗酒趁年华。'], 互动:'若只能问一位古人一件事，你问谁，又问什么？'},
+  '其六': {名:'临窗望云', 锁:'累计答对10题', 文:['窗含西岭千秋雪，门泊东吴万里船。','临窗望云，云卷云舒。','去留无意，宠辱不惊。','看山是山，看水是水。','心境即云境。'], 互动:'云散之后，你最想看见的是什么？'},
+  '其七': {名:'抚琴待知音', 锁:'错题回廊答对5题', 文:['琴瑟在御，莫不静好。','弦弦掩抑声声思，似诉平生不得志。','伯牙子期，高山流水。','知音少，弦断有谁听？','抚琴以待，君来否？'], 互动:'若真有一人听得懂你的琴，你希望那是谁？'},
+  '其八': {名:'拾级登高', 锁:'地狱难度通关', 文:['欲穷千里目，更上一层楼。','登高望远，天地一沙鸥。','不畏浮云遮望眼，只缘身在最高层。','高处不胜寒，却见众山小。','拾级而上，步步惊心。'], 互动:'你登过最高的地方，是哪里？'},
+  '其九': {名:'归舟泊岸', 锁:'累计跳过20题', 文:['轻舟已过万重山。','归舟泊岸，渔火点点。','家在哪里？在灯火阑珊处。','此心安处是吾乡。','泊岸，是为了下一次起航。'], 互动:'若真能回去，你想回到哪一年？'},
+  '其十': {名:'雨歇', 锁:'解锁前九章', 文:['雨终于停了。','天边出现了一道虹。','所有的等待都有了答案，所有的离别都是为了重逢。','凭轩听雨的故事，到此暂歇。','但雨还会再下，我们还会再见。','未完，但不是结束。'], 互动:'走到这里了。你最想对谁，说一句什么话？'},
 };
 
 // v1.3 新增：栀月NPC数据
@@ -218,6 +689,7 @@ const 更新日志 = [
   {日期:'2026-09-06', 版本:'v1.3', 内容:['公告板大升级：诗谶求签、江湖传闻、彩蛋墙、留言墙、天时','新增作者NPC「栀月」：高概率偶遇，活泼幽默，送小抄/打赏/剧透','留言墙置顶作者公告：内测须知、改编授权、BUG反馈渠道','修复Skulpt兼容性问题']},
   {日期:'2026-09-07', 版本:'v1.3.1', 内容:['修复茶楼「对客投壶」匹配度封顶50分：「差强人意」「金玉良缘」分支复活','修复残卷修复/古籍修复单字蒙对：改模糊匹配（七成相似）','修复反义词判定过松：叠字灌水不再判对','修复「送透字」「下局多锦囊」两个增益永不生效','修复AI难度反向：越难越强（简单0.5→地狱0.8）','修复诗案已结可无限重刷声望：卷宗封存不可重审','修复茶楼迎客污染「游戏次数」导致章节误解锁','修复启动公告「春节」死分支（节气表无春节，改为元旦）','茶楼客人（如醉翁）奉茶也积累亲密度，入室弟子更容易见到']},
   {日期:'2026-09-07', 版本:'v1.3.2', 内容:['新增存档/读档：进度自动保存，再开「前缘再续」','新增「焚稿重来」：退出时可选清除存档从头开始','新增启动公告：今日节气横幅+最新公告','新增每日签到计数']},
+  {日期:'2026-10-18', 版本:'v1.4', 内容:['十重意境各有专属玩法：雨打残卷 / 顺风接句 / 对月飞花 / 雪中寻字 / 茶席对答 / 观云意象 / 听音辨曲 / 拾级连答 / 泊岸联句 / 虹现复盘','新增「科举品第」：诗童→童生→秀才→举人→贡士→进士→翰林→诗仙','新增终章「曲终掩卷」：十境皆通后，以你的数据写一篇《听雨轩志》刻入碑林','入室弟子每局馈赠一枚锦囊','节气入戏：应节玩法得分加倍','九章补全「互动」一问，你答的话会被记住']},
 ];
 
 // v1.3 新增：江湖传闻
@@ -462,17 +934,19 @@ function 模糊匹配(用户输入, 标准答案, 阈值=0.6) {
 
 function 检查答案(用户输入, 标准答案列表, 反义词) {
   用户输入 = 用户输入.trim();
-  if (!用户输入 || 用户输入.length<2) return '错';
+  if (!用户输入 || 用户输入.length<2) { 音效('错'); return '错'; }
   for (let 答案 of 标准答案列表) {
-    if (答案.includes(用户输入) || 用户输入.includes(答案)) return '对';
-    if (模糊匹配(用户输入, 答案)) return '对';
+    if (答案.includes(用户输入) || 用户输入.includes(答案)) { 音效('对'); return '对'; }
+    if (模糊匹配(用户输入, 答案)) { 音效('对'); return '对'; }
   }
   // 兜底：含反义词且像一句诗（长度适中、用字不重复堆砌，防止「白白白白白」蒙对）
-  if (用户输入.includes(反义词) && 用户输入.length>=5 && 用户输入.length<=14 && new Set(用户输入).size>=4) return '对';
+  if (用户输入.includes(反义词) && 用户输入.length>=5 && 用户输入.length<=14 && new Set(用户输入).size>=4) { 音效('对'); return '对'; }
+  音效('错');
   return '错';
 }
 
 function 检查解锁() {
+  const 解锁前 = 已解锁.size;
   if (成就.游戏次数>=1) 已解锁.add('其二');
   if (成就.最高得分>=60) 已解锁.add('其三');
   if (成就.人机胜场>=1) 已解锁.add('其四');
@@ -482,10 +956,28 @@ function 检查解锁() {
   if (成就.地狱通关>=1) 已解锁.add('其八');
   if (成就.累计跳过>=20) 已解锁.add('其九');
   if (已解锁.size>=9) 已解锁.add('其十');
+  if (已解锁.size > 解锁前) 音效('解锁');
 }
 
 // ==================== 存档（localStorage 自动存取） ====================
-const 存档键 = '听雨轩存档_v1.3';
+// v1.3.2+ 存档键去版本号化：以后版本迭代不再换键，玩家存档永续有效
+const 存档键 = '听雨轩存档';
+const 旧存档键列表 = ['听雨轩存档_v1.3'];  // 历史版本用过的键，读到就迁移
+function 迁移旧存档() {
+  // 一次性迁移：新键没有存档、旧键有，就搬过来再删掉旧键；静默进行，失败不影响游戏
+  try {
+    if (localStorage.getItem(存档键)) return;
+    for (const 旧键 of 旧存档键列表) {
+      const 旧 = localStorage.getItem(旧键);
+      if (旧) {
+        localStorage.setItem(存档键, 旧);
+        localStorage.removeItem(旧键);
+        return;
+      }
+    }
+  } catch (e) { /* 忽略 */ }
+}
+迁移旧存档();
 function 存档() {
   try {
     const 档 = {
@@ -554,10 +1046,11 @@ function 启动公告() {
   }
   const 最新 = 更新日志[更新日志.length - 1];
   addText('【最新公告 | ' + 最新.日期 + ' ' + 最新.版本 + '】', 'time-sign');
-  最新.内容.slice(-3).forEach(条目 => addText('  · ' + 条目, 'time-sign'));
+  最新.内容.slice(0, 4).forEach(条目 => addText('  · ' + 条目, 'time-sign'));  // v1.4：改取首四条，先报大改
 }
 
 async function 启动(读取存档=false) {
+  配乐('主阁');
   clearContent();
   const 时 = getHour();
   addText('【' + 时 + '时签】' + rand(时辰签[时]), 'time-sign');
@@ -570,25 +1063,32 @@ async function 启动(读取存档=false) {
   const i = await showButtons(['[1] 惆怅 — 烟雨迷蒙，心事如织','[2] 淡然 — 云卷云舒，去留无意','[3] 期许 — 晨光熹微，万物可期']);
   心境 = ['惆怅','淡然','期许'][i];
   addText('心境已设为：' + 心境, 'correct'); await sleep(300);
+  await 弟子馈赠();
   主阁();
 }
 
 async function 主阁() {
+  配乐('主阁');
   检查解锁();
   存档();
   clearContent();
   addText('听雨轩 · 主阁', 'subtitle');
+  const [品称, 品学] = 计算品第();
+  const 十境通 = 已解锁.size >= 10;
+  addText('君今品第：' + 品称 + '（学养 ' + 品学 + '）', 'time-sign');
   await typeWrite('风未起，茶尚温，此间有数条路：');
-  const i = await showButtons([
+  const 主按钮 = [
     '[1] 雨落诗笺 · 章节游历（含古诗词小游戏）',
     '[2] 听雨茶楼 · 墨香经营',
     '[3] 诗案探疑 · 推理断案',
     '[4] 诗囊图鉴 · 分类览',
     '[5] 听雨碑林 · 刻石留名',
     '[6] 公告板 · 更新与亲密度',
-    '[7] 调弦换心境',
-    '[0] 合上这一页'
-  ]);
+    '[7] 调弦换心境'
+  ];
+  if (十境通) 主按钮.push('[8] 曲终掩卷 · 十境皆通（终章）');
+  主按钮.push('[0] 合上这一页');
+  const i = await showButtons(主按钮);
   if (i===0) 章节选择界面();
   else if (i===1) 听雨茶楼界面();
   else if (i===2) 诗案主界面();
@@ -596,11 +1096,13 @@ async function 主阁() {
   else if (i===4) 听雨碑林界面();
   else if (i===5) 公告板();
   else if (i===6) { 选择心境(); }
+  else if (i===7 && 已解锁.size>=10) { 曲终掩卷(); }
   else 统一收尾();
 }
 
 // ==================== 章节游历 ====================
 async function 章节选择界面() {
+  配乐('主阁');
   检查解锁();
   存档();
   clearContent();
@@ -623,7 +1125,366 @@ async function 章节选择界面() {
   运行章节(键);
 }
 
+// ==================== v1.4 新增：十重意境专属玩法 ====================
+const 章节专属名 = {
+  '其一':'雨打残卷', '其二':'顺风接句', '其三':'对月飞花', '其四':'雪中寻字',
+  '其五':'茶席对答', '其六':'观云意象', '其七':'听音辨曲', '其八':'拾级连答',
+  '其九':'泊岸联句', '其十':'虹现复盘',
+};
+
+// 五声调式：宫商角徵羽（其七「听音辨曲」用真琴音）
+const 调式题库 = [
+  {调:'宫', 音:261.63, 容:'低沉浑厚，如黄钟大吕，端方中正', 句:'大漠孤烟直'},
+  {调:'商', 音:293.66, 容:'清越肃杀，如金风乍起，慷慨悲凉', 句:'风萧萧兮易水寒'},
+  {调:'角', 音:329.63, 容:'生机勃发，如草木初萌，清亮舒展', 句:'春风又绿江南岸'},
+  {调:'徵', 音:392.00, 容:'热烈明亮，如烈火烹油，欢畅流走', 句:'日出江花红胜火'},
+  {调:'羽', 音:440.00, 容:'幽微哀婉，如夜雨敲窗，缠绵低回', 句:'冷冷清清'},
+];
+
+const 论道题 = [
+  {句:'采菊东篱下，悠然见南山。', 问:'此句写的是哪一种心境？',
+   选:['闲适自得','壮志难酬','思乡怀人'], 答:0, 评:'陶潜归园田居，此心安处，便是南山。'},
+  {句:'孤舟蓑笠翁，独钓寒江雪。', 问:'「独钓」二字，意在何处？',
+   选:['写渔翁之闲','写天地之孤','写雪景之美'], 答:1, 评:'千山鸟飞绝，万径人踪灭——孤不在人，在天地间。'},
+  {句:'会当凌绝顶，一览众山小。', 问:'此句的气象是？',
+   选:['开阔豪迈','萧瑟凄凉','婉约缠绵'], 答:0, 评:'少年杜甫，那时还未老，眼里有整座天下。'},
+  {句:'此情可待成追忆，只是当时已惘然。', 问:'「惘然」者，何也？',
+   选:['悔不当初','物是人非','求而不得'], 答:1, 评:'不是悔，是明白得太晚——当时只道是寻常。'},
+  {句:'沉舟侧畔千帆过，病树前头万木春。', 问:'刘禹锡写此句，是何态度？',
+   选:['怨天尤人','豁达向前','冷眼旁观'], 答:1, 评:'二十三年弃置身，仍能看见万木春。这才是本事。'},
+];
+
+const 意象题 = ['云','山','水','舟','雁'];
+
+function 弹音(f) { try { 乐.弹音(f, 2.4, 0.22); } catch (e) {} }
+
+// ---------- 科举品第 ----------
+const 品第表 = [[0,'诗童'],[10,'童生'],[30,'秀才'],[60,'举人'],[100,'贡士'],[150,'进士'],[250,'翰林'],[400,'诗仙']];
+function 计算品第() {
+  const 学 = 成就.累计答对
+    + 成就.人机胜场 * 5 + 成就.地狱通关 * 10 + 成就.诗案侦破 * 3
+    + 成就.飞花令胜 * 3 + 成就.残卷修复 * 2 + 成就.雅集举办 * 2
+    + 已解锁.size * 5 + Math.floor(诗囊.length / 5);
+  let 称 = '诗童';
+  for (const [阈, c] of 品第表) if (学 >= 阈) 称 = c;
+  return [称, 学];
+}
+function 品第进阶(旧称, 新称) {
+  const 序 = 品第表.map(x => x[1]);
+  return 序.indexOf(新称) > 序.indexOf(旧称);
+}
+
+// ---------- 节气加成 ----------
+const 节气加成表 = {
+  '立春': {戏:'观云意象', 倍:2, 由:'东风解冻，云物更新，正宜观云'},
+  '元宵': {戏:'听音辨曲', 倍:2, 由:'月上柳梢，灯火可亲，正是听琴夜'},
+  '清明': {戏:'雨打残卷', 倍:2, 由:'清明时节雨纷纷，雨中之卷最相亲'},
+  '端午': {戏:'茶席对答', 倍:2, 由:'蒲酒话升平，茶席论道宜'},
+  '七夕': {戏:'泊岸联句', 倍:2, 由:'两情若是久长时，句句相连'},
+  '中秋': {戏:'对月飞花', 倍:2, 由:'月满中秋，此夜对月最佳'},
+  '重阳': {戏:'拾级连答', 倍:2, 由:'遥知兄弟登高处，今日登高正当令'},
+  '冬至': {戏:'雪中寻字', 倍:2, 由:'冬至阳生，雪中寻字应时'},
+  '元旦': {戏:'顺风接句', 倍:2, 由:'春风送暖，顺风正好续句'},
+};
+function 节气加成() {
+  const [节] = 节气判定();
+  return [节, 节 ? 节气加成表[节] : null];
+}
+
+// ---------- 入室弟子馈赠 ----------
+const 弟子馈赠语 = {
+  '青衫':'青衫整理旧箱笼，翻出一纸残题，道：「这个，兴许用得上。」',
+  '听雨客':'听雨客撑伞而至，袖中取出一物：「雨大，莫淋湿了锦囊。」',
+  '墨痕':'墨痕不语，只将一方旧墨推过来。墨上刻着半个字。',
+  '折柳':'折柳折了新枝，编作小篮，篮里躺着一枚锦囊。',
+  '若菊':'若菊煮茶一盏，压在锦囊之下：「先喝茶，再看题。」',
+  '谪仙':'谪仙仰头饮尽，把杯一掷：「拿去，莫再输了。」',
+  '漱石':'漱石枕流而归，怀里滚出一件物事：「溪边捡的，送你。」',
+  '白衣':'白衣远远作揖，摊开掌心，是一枚素白锦囊。',
+  '樵夫':'樵夫放下柴担，从柴缝里抠出一物：「山里得的。」',
+  '醉翁':'醉翁打个酒嗝，摸出皱巴巴一包：「拿去拿去。」',
+  '候君':'候君久候于此，见你来了，才把东西递上。',
+  '小黎':'小黎踮脚塞给你：「我攒了好久的！」',
+  '云起':'云起自云中来，袖口一抖，落下一枚锦囊。',
+  '夜归人':'夜归人踏月而至，放下东西便走，不肯多言。',
+  '栀月（作者）':'作者本人跳出来了：「这个是我偷偷塞的，别声张。」',
+};
+let 已馈赠 = false;
+
+async function 弟子馈赠() {
+  if (已馈赠 || 入室弟子.size === 0) return;
+  已馈赠 = true;
+  const 名单 = [...入室弟子];
+  const 赠 = rand(名单);
+  addDivider();
+  await typeWrite(弟子馈赠语[赠] || (赠 + '递来一物：「这个，给君备着。」'));
+  addText('【' + 赠 + ' 馈赠】', 'correct');
+  const i = await showButtons(['[1] 透字（下题首字白送）','[2] 换题（换一道新题）','[3] 半句（下句予半）','[4] 心领了，不必']);
+  if (i < 3) {
+    const 囊 = ['透字','换题','半句'][i];
+    当前增益[囊] = (当前增益[囊] || 0) + 1;
+    await typeWrite('得「' + 囊 + '」一枚。此恩铭记。');
+  } else {
+    await typeWrite('君子不夺人所好。' + 赠 + '收了回去，却也未恼。');
+  }
+  addDivider();
+}
+
+// ---------- 终章 · 曲终掩卷 ----------
+async function 曲终掩卷() {
+  配乐('收尾');
+  标题('曲终掩卷');
+  await typeWrite('十境皆通，雨已歇，虹已现。');
+  await typeWrite('此刻且掩卷——不是结束，是为一程作个了断。');
+  await sleep(300);
+  const [称, 学] = 计算品第();
+  const [节] = 节气加成();
+  const 亲 = Object.entries(诗友亲密度).sort((a, b) => b[1] - a[1]);
+  const 最爱 = (亲.length && 亲[0][1] > 0) ? 亲[0][0] : '尚无';
+  const 分类计数 = {};
+  诗囊.forEach(句 => { const k = 判来源(句); 分类计数[k] = (分类计数[k] || 0) + 1; });
+  const 分类满 = Object.keys(分类计数);
+
+  addDivider();
+  addText('《听雨轩志》', 'subtitle');
+  await typeWrite('君入轩中，凡' + 成就.游戏次数 + '回。');
+  await typeWrite('答对' + 成就.累计答对 + '题，最高得' + 成就.最高得分 + '分。');
+  await typeWrite('学养' + 学 + '，品第' + 称 + '。');
+  if (成就.人机胜场) await typeWrite('人机对弈，胜' + 成就.人机胜场 + '场。');
+  if (成就.地狱通关) await typeWrite('地狱难度，通' + 成就.地狱通关 + '次。此非人力可为。');
+  if (成就.诗案侦破) await typeWrite('诗案探疑，破' + 成就.诗案侦破 + '桩。');
+  if (成就.雅集举办) await typeWrite('雅集筹办' + 成就.雅集举办 + '度。');
+  await typeWrite('诗囊得句' + 诗囊.length + '联。');
+  if (诗囊.length) {
+    await typeWrite('其首：「' + 诗囊[0] + '」');
+    await typeWrite('其末：「' + 诗囊[诗囊.length - 1] + '」');
+  }
+  await typeWrite('相投最深者，' + 最爱 + '也。');
+  if (入室弟子.size) await typeWrite('入室弟子' + 入室弟子.size + '人：' + [...入室弟子].join('、'));
+  await typeWrite('图鉴' + 分类满.length + '类有录：' + (分类满.length ? 分类满.join('、') : '尚待君填'));
+  if (节) await typeWrite('是日' + 节 + '。天时有情，恰逢君至。');
+  await typeWrite('——此志为君一人所写，天下再无第二本。');
+  addDivider();
+
+  碑林['听雨轩志'] = {
+    得分: 学, 品第: 称, 学养: 学, 得句: 诗囊.length,
+    保持者: 心境 || '无名氏', 时: new Date().toLocaleString(),
+  };
+  存档();
+  await typeWrite('已刻石于听雨碑林。他日重游，碑上犹有君名。');
+  await showButtons(['【掩卷】']);
+  主阁();
+}
+
+// ---------- 十境专属玩法 ----------
+async function 章节专属玩法(键) {
+  const 名 = 章节专属名[键];
+  let 得 = 0, 对题 = 0, 共 = 5;
+  配乐(键);
+  标题(章节数据[键].名 + ' · ' + 名);
+
+  if (键 === '其一') {
+    await typeWrite('雨落如帘，卷上墨迹洇开，只余末字尚辨。');
+    await typeWrite('君须补全下句。');
+    const 卷 = shuffle(残卷题库).slice(0, 5);
+    for (let i = 0; i < 卷.length; i++) {
+      const 对 = 卷[i];
+      addText('第' + (i + 1) + '卷：' + 对.上句);
+      addText('      ' + '▓'.repeat(对.下句.length - 1) + 对.下句.slice(-1), 'locked');
+      const 答 = await showInput('▶ 补此下句：');
+      if (答 && (模糊匹配(答, 对.下句) || 对.下句.includes(答))) {
+        音效('对'); await typeWrite('雨歇字现，正是「' + 对.下句 + '」。');
+        得 += 20; 对题++; 诗囊.push(对.上句 + '，' + 对.下句);
+      } else {
+        音效('错'); await typeWrite('惜哉。此卷原是「' + 对.下句 + '」。');
+      }
+    }
+  }
+  else if (键 === '其二') {
+    await typeWrite('风起东南，送君一字。');
+    await typeWrite('吾出上句，并予下句首字，君顺风续之。');
+    const 卷 = shuffle(残卷题库).slice(0, 5);
+    for (let i = 0; i < 卷.length; i++) {
+      const 对 = 卷[i];
+      addText('第' + (i + 1) + '句：' + 对.上句);
+      addText('      ' + 对.下句[0] + '▓'.repeat(对.下句.length - 1), 'locked');
+      const 答 = await showInput('▶ 顺风续句：');
+      if (答 && (模糊匹配(答, 对.下句) || 对.下句.includes(答))) {
+        音效('对'); await typeWrite('风送好句：「' + 对.下句 + '」。');
+        得 += 20; 对题++; 诗囊.push(对.上句 + '，' + 对.下句);
+      } else {
+        音效('错'); await typeWrite('风散了。原句是「' + 对.下句 + '」。');
+      }
+    }
+  }
+  else if (键 === '其三') {
+    await typeWrite('月色满庭，请以「月」入诗。');
+    await typeWrite('五句成礼，多对多得。');
+    const 例 = ['举杯邀明月','明月几时有','月落乌啼霜满天','海上明月共潮生','秦时明月汉时关'];
+    for (let i = 1; i <= 5; i++) {
+      addText('第' + i + '杯 · 请以「月」入诗');
+      const 答 = await showInput('▶ ');
+      if (答.length >= 3 && 答.includes('月')) {
+        音效('对'); await typeWrite('好。此杯当饮。');
+        得 += 20; 对题++; 诗囊.push('对月「月」：' + 答);
+      } else {
+        音效('错'); await typeWrite('此句无月，或未成句。譬如：' + rand(例));
+      }
+    }
+  }
+  else if (键 === '其四') {
+    await typeWrite('雪覆梅枝，句中藏字，为雪所掩。');
+    await typeWrite('君须于三字中，寻回被掩之字。');
+    const 卷 = shuffle(残卷题库.filter(x => x.下句.length >= 5)).slice(0, 5);
+    for (let i = 0; i < 卷.length; i++) {
+      const 对 = 卷[i], 下 = 对.下句;
+      const 位 = 1 + Math.floor(Math.random() * (下.length - 2));
+      const 正 = 下[位];
+      const 池 = '梅雪风寒月云山水花枝玉阶白夜江天星'.split('').filter(c => c !== 正);
+      const 选 = shuffle([正].concat(shuffle(池).slice(0, 2)));
+      addText('第' + (i + 1) + '枝：' + 对.上句);
+      addText('      ' + 下.slice(0, 位) + '▓' + 下.slice(位 + 1), 'locked');
+      const j = await showButtons(选.map((c, k) => '[' + (k + 1) + '] ' + c));
+      if (选[j] === 正) {
+        音效('对'); await typeWrite('正是「' + 正 + '」。雪落字现，梅香如故。');
+        得 += 20; 对题++; 诗囊.push(对.上句 + '，' + 下);
+      } else {
+        音效('错'); await typeWrite('非也。被掩的是「' + 正 + '」。');
+      }
+    }
+  }
+  else if (键 === '其五') {
+    await typeWrite('炉火初红，茶烟袅袅。');
+    await typeWrite('茶不论味，论境。君且看句，答吾一问。');
+    const 题 = shuffle(论道题).slice(0, 5);
+    for (let i = 0; i < 题.length; i++) {
+      const t = 题[i];
+      addDivider();
+      addPoemLine('「' + t.句 + '」');
+      addText('第' + (i + 1) + '问 · ' + t.问);
+      const j = await showButtons(t.选.map((c, k) => '[' + (k + 1) + '] ' + c));
+      if (j === t.答) { 音效('对'); await typeWrite('善。' + t.评); 得 += 20; 对题++; }
+      else { 音效('错'); await typeWrite('君所思亦有其理。然——' + t.评); }
+    }
+  }
+  else if (键 === '其六') {
+    await typeWrite('云卷云舒，各成其象。');
+    await typeWrite('吾出一象，君以诗应之。');
+    for (let i = 0; i < 意象题.length; i++) {
+      const 象 = 意象题[i];
+      addText('第' + (i + 1) + '象 · 请以「' + 象 + '」入诗');
+      const 答 = await showInput('▶ ');
+      if (答.length >= 3 && 答.includes(象)) {
+        音效('对'); await typeWrite('云中有象，象中有诗。');
+        得 += 20; 对题++; 诗囊.push('观云「' + 象 + '」：' + 答);
+      } else { 音效('错'); await typeWrite('此句未见「' + 象 + '」。'); }
+    }
+  }
+  else if (键 === '其七') {
+    await typeWrite('琴音起于指下，五音各有其性。');
+    await typeWrite('宫商角徵羽——君且听其音，辨其调门。');
+    addText('（若暂时无声，点一下页面任意处即可）', 'time-sign');
+    const 序 = shuffle(调式题库).slice(0, 5);
+    for (let i = 0; i < 序.length; i++) {
+      const t = 序[i];
+      addDivider();
+      addText('第' + (i + 1) + '弦 · 听琴');
+      弹音(t.音); await sleep(620);
+      弹音(t.音); await sleep(300);
+      弹音(t.音 * Math.pow(2, 2 / 12)); await sleep(300);
+      弹音(t.音 * Math.pow(2, 4 / 12)); await sleep(380);
+      弹音(t.音); await sleep(500);
+      const 选调 = shuffle(调式题库.map(x => x.调));
+      const j = await showButtons(选调.map((c, k) => '[' + (k + 1) + '] ' + c + '调'));
+      if (选调[j] === t.调) {
+        音效('对'); await typeWrite('知音哉！正是' + t.调 + '调。');
+        await typeWrite('「' + t.句 + '」——' + t.容 + '，此调之诗也。');
+        得 += 20; 对题++; 诗囊.push(t.调 + '调：' + t.句);
+      } else {
+        音效('错'); await typeWrite('非也。此为' + t.调 + '调——' + t.容 + '。');
+        await typeWrite('「' + t.句 + '」——记住这个味道。');
+      }
+    }
+  }
+  else if (键 === '其八') {
+    await typeWrite('拾级而上，一级难似一级。');
+    await typeWrite('答错一步，便止于此级。且看君能登第几层。');
+    const 阶 = ['简单','普通','困难','地狱'];
+    let 层 = 0;
+    for (; 层 < 阶.length; 层++) {
+      const 题 = rand(题库[阶[层]]);
+      addDivider();
+      addText('第' + (层 + 1) + '级 · ' + 阶[层]);
+      addPoemLine('上句：' + 题.原句);
+      addText('（须对含「' + 题.反义词 + '」字之句）');
+      const 答 = await showInput('▶ ');
+      if (检查答案(答, 题.答案, 题.反义词) !== '错') {
+        await typeWrite('上一层楼。'); 得 += 25; 对题++;
+      } else {
+        await typeWrite('止步于第' + (层 + 1) + '级。原可对：' + 题.答案[0]);
+        break;
+      }
+    }
+    if (层 >= 阶.length) await typeWrite('——绝顶。众山皆小。');
+  }
+  else if (键 === '其九') {
+    await typeWrite('舟泊岸，句亦可接。');
+    await typeWrite('吾出上句，君接下句。四程皆稳，方算到岸。');
+    共 = 4;
+    const 卷 = shuffle(残卷题库).slice(0, 4);
+    for (let i = 0; i < 卷.length; i++) {
+      const 对 = 卷[i];
+      addText('第' + (i + 1) + '程：' + 对.上句);
+      const 答 = await showInput('▶ 接下句：');
+      if (答 && (模糊匹配(答, 对.下句) || 对.下句.includes(答))) {
+        音效('对'); await typeWrite('接得稳：「' + 对.下句 + '」。');
+        得 += 25; 对题++; 诗囊.push(对.上句 + '，' + 对.下句);
+      } else { 音效('错'); await typeWrite('此处断缆。原句是「' + 对.下句 + '」。'); }
+    }
+  }
+  else if (键 === '其十') {
+    await typeWrite('雨停了。虹出来了。');
+    await typeWrite('且回头看看，这一路是怎么走过来的。');
+    addDivider();
+    const [称, 学] = 计算品第();
+    await typeWrite('君入听雨轩，凡' + 成就.游戏次数 + '回。');
+    await typeWrite('累计答对' + 成就.累计答对 + '题，最高得' + 成就.最高得分 + '分。');
+    await typeWrite('学养' + 学 + '，今为' + 称 + '。');
+    if (成就.人机胜场) await typeWrite('人机对弈，胜' + 成就.人机胜场 + '场。');
+    if (成就.地狱通关) await typeWrite('地狱难度，通' + 成就.地狱通关 + '次——这是真本事。');
+    if (成就.诗案侦破) await typeWrite('诗案探疑，破' + 成就.诗案侦破 + '桩。');
+    if (诗囊.length) {
+      await typeWrite('诗囊得句' + 诗囊.length + '联。其首：「' + 诗囊[0] + '」');
+      await typeWrite('其末：「' + 诗囊[诗囊.length - 1] + '」');
+    } else await typeWrite('诗囊尚空，然来日方长。');
+    const 亲 = Object.entries(诗友亲密度).sort((a, b) => b[1] - a[1]);
+    if (亲.length && 亲[0][1] > 0) await typeWrite('与君最相投者，' + 亲[0][0] + '也（亲密度' + 亲[0][1] + '）。');
+    if (入室弟子.size) await typeWrite('已入室者：' + [...入室弟子].join('、'));
+    await typeWrite('十重意境，君已尽历。虹现于天，是为雨歇之礼。');
+    await typeWrite('——未完，但不是结束。');
+    共 = 0;
+  }
+
+  addDivider();
+  const [节, 加] = 节气加成();
+  if (加 && 加.戏 === 名 && 得 > 0) {
+    await typeWrite('【' + 节 + '】' + 加.由);
+    await typeWrite('——此戏应节，得分加倍。');
+    得 = 得 * 加.倍;
+  }
+  if (得 > 0) {
+    成就.最高得分 = Math.max(成就.最高得分, 得);
+    if (键 !== '其十') 成就.累计答对 += 对题;
+  }
+  最后战绩 = { 模式: 名, 得分: 得, 答对: 对题, 共: 共 };
+  存档();
+  addText('【' + 名 + ' · 得' + 得 + '分】', 'correct');
+  await showButtons(['【按此返回】']);
+  章节选择界面();
+}
+
 async function 运行章节(键) {
+  配乐(键);
   const 数据 = 章节数据[键];
   clearContent();
   addText(数据.名, 'subtitle');
@@ -634,13 +1495,16 @@ async function 运行章节(键) {
     addText('「' + 回应 + '」'); await typeWrite('原来，我们都一样。');
   }
   addDivider(); await typeWrite('雨停了，荷上的水珠滚落。'); await typeWrite('那一声轻响，是夏天在叹息。'); await typeWrite('而我还在这里，等下一阵风起。');
+  const 专属 = 章节专属名[键];
+  await typeWrite('此处有一戏，为他境所无——「' + 专属 + '」。');
   await typeWrite('可愿入文字雅戏一游？');
-  const i = await showButtons(['[1] 单人闯关','[2] 人机对弈','[3] 飞花令雅戏','[4] 残卷修复','[5] 罢了']);
-  if (i===0) 文字游戏(); else if (i===1) 人机对弈(); else if (i===2) 飞花令雅戏(); else if (i===3) 残卷修复(); else { 诗友尺素(); await sleep(200); 章节选择界面(); }
+  const i = await showButtons(['[1] ' + 专属 + '（此境独有）','[2] 单人闯关','[3] 人机对弈','[4] 飞花令雅戏','[5] 残卷修复','[6] 罢了']);
+  if (i===0) 章节专属玩法(键); else if (i===1) 文字游戏(); else if (i===2) 人机对弈(); else if (i===3) 飞花令雅戏(); else if (i===4) 残卷修复(); else { 诗友尺素(); await sleep(200); 章节选择界面(); }
 }
 
 // ==================== 文字雅戏 ====================
 async function 文字游戏() {
+  配乐('雅戏');
   clearContent();
   addText('凭轩听雨 · 文字雅戏', 'subtitle');
   await typeWrite('方才听雨，今来试才。');
@@ -723,6 +1587,7 @@ async function 文字游戏() {
 
 // ==================== 人机对弈 ====================
 async function 人机对弈() {
+  配乐('雅戏');
   const AI概率 = {简单:0.5, 普通:0.6, 困难:0.7, 地狱:0.8};
   clearContent();
   addText('凭轩听雨 · 对弈', 'subtitle');
@@ -780,6 +1645,7 @@ async function 人机对弈() {
 
 // ==================== 飞花令 ====================
 async function 飞花令雅戏() {
+  配乐('飞花');
   clearContent();
   addText('凭轩听雨 · 飞花令', 'subtitle');
   await typeWrite('飞花令者，以字为媒，以诗会友。');
@@ -812,6 +1678,7 @@ async function 飞花令雅戏() {
 
 // ==================== 残卷修复 ====================
 async function 残卷修复() {
+  配乐('雅戏');
   clearContent();
   addText('凭轩听雨 · 残卷修复', 'subtitle');
   await typeWrite('案上有一卷残破古籍，墨迹斑驳。');
@@ -845,6 +1712,7 @@ async function 残卷修复() {
 
 // ==================== 错题回廊 ====================
 async function 错题回廊() {
+  配乐('回廊');
   if (错题本.length===0) return;
   clearContent();
   addText('错题回廊 · 温故知新', 'subtitle');
@@ -872,6 +1740,7 @@ async function 错题回廊() {
 
 // ==================== 诗友尺素 ====================
 async function 诗友尺素() {
+  配乐('诗友');
   if (!最后战绩.模式) return;
   clearContent();
   addText('诗友尺素 · 来鸿', 'subtitle');
@@ -1016,6 +1885,7 @@ function 评语生成(匹配度, 客人) {
 }
 
 async function 对客投壶() {
+  配乐('茶楼');
   标题('对客投壶 · 奉茶');
   await typeWrite('门帘一挑，有客到。');
   const 客 = rand(客人池);
@@ -1068,6 +1938,7 @@ async function 对客投壶() {
 }
 
 async function 鬼市淘宝() {
+  配乐('市井');
   标题('鬼市 · 残卷摊');
   await typeWrite('月黑风高，鬼市开张。');
   await typeWrite('此处只收铜钱，不卖良心。');
@@ -1098,6 +1969,7 @@ async function 鬼市淘宝() {
 }
 
 async function 古籍修复() {
+  配乐('古籍');
   标题('修卷斋 · 补墨');
   const 待修 = 茶楼.古籍.filter(g => !茶楼.修复古籍.some(f => f.名 === g.名));
   if (!待修.length) { await typeWrite('案上无残卷，或可去鬼市淘换。'); await showButtons(['【退下】']); return; }
@@ -1146,6 +2018,7 @@ async function 古籍修复() {
 }
 
 async function 雅集筹办() {
+  配乐('雅集');
   标题('雅集 · 诗会');
   if (茶楼.声望 < 20) {
     await typeWrite('声望不足，无人赴会。');
@@ -1189,6 +2062,7 @@ async function 雅集筹办() {
 }
 
 async function 听雨茶楼界面() {
+  配乐('茶楼');
   while (true) {
     刻石('茶楼经营', 茶楼.声望);
     存档();
@@ -1219,6 +2093,7 @@ async function 听雨茶楼界面() {
 
 // ==================== v1.1 诗案探疑 · 推理断案（原版内容恢复） ====================
 async function 勘查现场(案件) {
+  配乐('诗案');
   标题('勘查现场 · ' + 案件.名);
   await typeWrite(案件.导语);
   await typeWrite('现场留有血书残句：');
@@ -1235,6 +2110,7 @@ async function 勘查现场(案件) {
 }
 
 async function 证人质询(案件) {
+  配乐('诗案');
   标题('证人质询 · 对质');
   await typeWrite('堂下三人，各执一词。');
   await typeWrite('其中有人以诗乱真，须找出矛盾之处。');
@@ -1262,6 +2138,7 @@ async function 证人质询(案件) {
 }
 
 async function 藏头破译(案件) {
+  配乐('诗案');
   标题('藏头密信 · 破译');
   await typeWrite('案发现场截获贺诗四首，看似寻常，实则藏头。');
   await typeWrite('每句首字连读，即是真相。');
@@ -1279,6 +2156,7 @@ async function 藏头破译(案件) {
 }
 
 async function 断案总结(案件, 现场对, 质询对, 藏头对) {
+  配乐('断案');
   标题('结案 · ' + 案件.名);
   const 总分 = [现场对, 质询对, 藏头对].filter(Boolean).length;
   await typeWrite('三堂会审，君断得 ' + 总分 + ' / 3 处要害。');
@@ -1301,6 +2179,7 @@ async function 断案总结(案件, 现场对, 质询对, 藏头对) {
 }
 
 async function 诗案主界面() {
+  配乐('诗案');
   while (true) {
     存档();
     标题('听雨轩 · 诗案卷宗');
@@ -1338,6 +2217,7 @@ function 判来源(句) {
 }
 
 async function 诗囊图鉴界面() {
+  配乐('图鉴');
   const 主题表 = ['风','花','雪','月','春','夏','秋','冬','山','水','雨','云','酒','愁','归','夜'];
   while (true) {
     标题('诗囊图鉴 · 分类览');
@@ -1368,6 +2248,7 @@ async function 诗囊图鉴界面() {
 
 // ==================== v1.2 听雨碑林 · 刻石留名（恢复） ====================
 async function 听雨碑林界面() {
+  配乐('碑林');
   标题('听雨碑林 · 刻石留名');
   await typeWrite('六种模式之最高战绩，皆刻于此碑。');
   const 名目 = {
@@ -1382,6 +2263,10 @@ async function 听雨碑林界面() {
     if (碑林[m]) addText('【' + m + '】' + 名目[m] + '：' + 碑林[m].得分 + '　保持者：' + (碑林[m].保持者 || '你') + '　刻于 ' + 碑林[m].时);
     else addText('【' + m + '】虚位以待……', 'locked');
   }
+  const 志 = 碑林['听雨轩志'];
+  if (志) {
+    addText('【听雨轩志】品第：' + (志.品第 || '—') + '　学养：' + 志.学养 + '　得句：' + 志.得句 + '　保持者：' + (志.保持者 || '你') + '　刻于 ' + 志.时);
+  }
   await showButtons(['【退至主阁】']);
   主阁();
 }
@@ -1390,6 +2275,7 @@ async function 听雨碑林界面() {
 
 // 诗谶求签
 async function 诗谶求签() {
+  配乐('求签');
   空行(2);
   标题('诗谶求签 · 问卜', '═');
   if (今日已求签) {
@@ -1448,6 +2334,7 @@ async function 诗谶求签() {
 
 // 江湖传闻
 async function 江湖传闻() {
+  配乐('市井');
   空行(2);
   标题('江湖传闻 · 小道消息', '═');
   await typeWrite('墙角几个闲人正在窃窃私语……');
@@ -1462,6 +2349,7 @@ async function 江湖传闻() {
 
 // 版本志（玩法详解）
 async function 版本志() {
+  配乐('主阁');
   while (true) {
     空行(1);
     标题('版本志 · 玩法详解', '═');
@@ -1475,9 +2363,10 @@ async function 版本志() {
       '[6] 诗友亲密度 · 入室弟子',
       '[7] 诗谶求签 · 每日运势',
       '[8] 更新历史',
+      '[9] 十境专属玩法 · v1.4 新增',
       '[0] 退至公告板'
     ]);
-    if (i === 8) break;
+    if (i === 9) break;
     const 详解 = [
       '雨落诗笺：十重意境章节游历。每章含古风散文，读罢可选四种雅戏：单人闯关（反义词对诗）、人机对弈（与AI同题共答）、飞花令（含令字对诗）、残卷修复（补全上句）。答错归错题回廊，通关收匿名信。',
       '听雨茶楼：经营茶楼，来客报心境→选句奉茶（匹配度高赏钱多）。鬼市买残卷→修复补句→茶楼升级。声望≥20办雅集，邀AI对主题句。',
@@ -1499,12 +2388,35 @@ async function 版本志() {
         for (let 条目 of 记录.内容) addText('  · ' + 条目);
       }
       await showButtons(['【退下】']);
+    } else if (i === 8) {
+      空行(1);
+      标题('十境专属玩法 · v1.4 新增', '═');
+      await typeWrite('十重意境，自此各有各的模样，不再是一般的流水。');
+      空行(1);
+      for (const 行 of [
+        '其一 凭轩听雨 · 雨打残卷：下句被雨洇开，只留末字，请补全整句。',
+        '其二 倚栏听风 · 顺风接句：风送下句首字，顺风续完。',
+        '其三 对月独酌 · 对月飞花：令字定为「月」，五杯成礼。',
+        '其四 踏雪寻梅 · 雪中寻字：句中埋一字，三选一寻回。',
+        '其五 煮茶论道 · 茶席对答：论道三问，答罢有评。',
+        '其六 临窗望云 · 观云意象：出一象（云山舟雁），以诗应之。',
+        '其七 抚琴待知音 · 听音辨曲：闭目听琴，辨其宫商角徵羽。',
+        '其八 拾级登高 · 拾级连答：简单→普通→困难→地狱，答错即止。',
+        '其九 归舟泊岸 · 泊岸联句：四程接句，程程相连。',
+        '其十 雨歇虹现 · 虹现复盘：以你自身的数据，回望这一路。'
+      ]) addText('  ' + 行);
+      空行(1);
+      addText('另设科举品第：诗童至诗仙，学养足则进阶，主阁顶上可见。');
+      addText('十境皆通之后，主阁会多出「曲终掩卷」一门，为你一人作一篇《听雨轩志》。');
+      addText('入室弟子每局赠锦囊一枚；节气当日，应节玩耍得分加倍。');
+      await showButtons(['【退下】']);
     }
   }
 }
 
 // 彩蛋墙
 async function 彩蛋墙() {
+  配乐('主阁');
   空行(2);
   标题('彩蛋墙 · 隐藏提示', '═');
   await typeWrite('墙上贴着几张泛黄的纸条，似是前人留下的线索……');
@@ -1529,6 +2441,7 @@ async function 彩蛋墙() {
 
 // 留言墙
 async function 留言墙() {
+  配乐('主阁');
   while (true) {
     空行(1);
     标题('留言墙 · 诗友留墨', '═');
@@ -1559,6 +2472,7 @@ async function 留言墙() {
 
 // 天时
 async function 天气时令联动() {
+  配乐('主阁');
   空行(2);
   标题('天时 · 时令与气象', '═');
   const now = new Date();
@@ -1591,6 +2505,7 @@ async function 天气时令联动() {
 
 // 公告板主界面
 async function 公告板() {
+  配乐('主阁');
   while (true) {
     存档();
     空行(1);
@@ -1599,7 +2514,7 @@ async function 公告板() {
     // 显示最新公告
     const 最新 = 更新日志[更新日志.length-1];
     addText('【最新公告 | ' + 最新.日期 + ' ' + 最新.版本 + '】');
-    for (let 条目 of 最新.内容.slice(-2)) addText('  · ' + 条目);
+    for (let 条目 of 最新.内容.slice(0, 3)) addText('  · ' + 条目);
     const i = await showButtons([
       '[1] 诗谶求签 · 每日运势',
       '[2] 江湖传闻 · 小道消息',
@@ -1634,6 +2549,7 @@ async function 公告板() {
 
 // ==================== 选择心境 ====================
 async function 选择心境() {
+  配乐('主阁');
   clearContent();
   await typeWrite('调弦...');
   addText('此刻心境如何？');
@@ -1647,6 +2563,7 @@ async function 选择心境() {
 
 // ==================== 统一收尾 ====================
 async function 统一收尾() {
+  配乐('收尾');
   clearContent();
   addDivider();
   await typeWrite('罢了……');
